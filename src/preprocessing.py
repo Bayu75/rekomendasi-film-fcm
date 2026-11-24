@@ -226,6 +226,6 @@ def build_features(df, artifacts=None):
         artefak["pca_fcm"] = pca_fcm
         artefak["pca_2d"] = pca_fcm
     return X, df_film, artefak
-    
+
 # Alias agar provider.py yang masih memakai nama lama tetap jalan
 transform_new_data = transform_new
