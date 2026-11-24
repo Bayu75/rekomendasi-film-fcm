@@ -1,5 +1,4 @@
 """Memuat data hasil preprocessing (Anggota 1) untuk KNN dan evaluasi."""
-from cycler import V
 import ast
 from pathlib import Path
 
@@ -44,9 +43,12 @@ def load_data(data_dir=DATA_DIR):
 
 def cari_film(movies, judul):
     """Mencari indeks baris film berdasarkan judul (tidak peka huruf besar/kecil)."""
-    cocok = movies.index[movies["title"].str.lower() == judul.lower()]
+    cocok = movies.index[movies["title"].str.lower().str.strip() == judul.lower().strip()]
     if len(cocok) == 0:
         raise ValueError(f"Film '{judul}' tidak ditemukan.")
+    if len(cocok) > 1:
+        daftar = ", ".join(f"{int(movies.loc[i, 'id'])} ({int(movies.loc[i, 'release_year'])})" for i in cocok)
+        raise ValueError(f"Judul '{judul}' ada {len(cocok)} film (id/tahun: {daftar}). Pilih salah satu.")
     return int(cocok[0])
 
 def load_model(n_film, c=3, model_dir=ROOT / "models", seed=42):
