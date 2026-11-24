@@ -47,3 +47,14 @@ def cari_film(movies, judul):
     if len(cocok) == 0:
         raise ValueError(f"Film '{judul}' tidak ditemukan.")
     return int(cocok[0])
+
+def load_model(n_film, c=3, model_dir=ROOT / "models", seed=42):
+    """Muat U dan V hasil FCM; kalau belum ada, buat U acak sementara."""
+    model_dir = Path(model_dir)
+    u_path, v_path = model_dir / "U.npy", model_dir / "V.npy"
+    if u_path.exists() and v_path.exists():
+        return np.load(u_path), np.load(v_path), True
+    rng = np.random.default_rng(seed)
+    U = rng.random((n_film, c))
+    U /= U.sum(axis=1, keepdims=True)
+    return U, None, False
