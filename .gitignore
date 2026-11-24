@@ -27,6 +27,10 @@ models/*
 Thumbs.db
 data/processed/*
 !data/processed/.gitkeep
+!data/processed/G.csv
+!data/processed/X_final.csv
+!data/processed/movies_final.csv
+!data/processed/preprocessing_artifacts.pkl
 !models/U.npy
 !models/V.npy
 !models/pca_fcm.joblib
