@@ -143,5 +143,89 @@ def transform_new(data, artifacts):
 
     return X_final
 
+# ---------------------------------------------------------------------------
+# Fungsi kontrak PRD untuk fitur upload CSV
+# ---------------------------------------------------------------------------
+
+KOLOM_WAJIB_CSV = ["id", "title", "genres", "vote_average", "vote_count",
+                   "popularity", "runtime", "release_date"]
+
+
+def _daftar_genre(genres):
+    """Ubah isi kolom genres (string/list) menjadi list nama genre."""
+    if isinstance(genres, str):
+        try:
+            genres = ast.literal_eval(genres)
+        except (ValueError, SyntaxError):
+            return []
+    if not isinstance(genres, (list, tuple)):
+        return []
+    return [g["name"] if isinstance(g, dict) else str(g) for g in genres]
+
+
+def validate_csv(df):
+    """Validasi CSV unggahan. Return list pesan error (kosong = valid)."""
+    pesan = []
+    hilang = [k for k in KOLOM_WAJIB_CSV if k not in df.columns]
+    if hilang:
+        return [f"Kolom berikut tidak ditemukan: {', '.join(hilang)}."]
+    if len(df) == 0:
+        return ["File tidak berisi baris data."]
+    for k in ["vote_average", "vote_count", "popularity", "runtime"]:
+        angka = pd.to_numeric(df[k], errors="coerce")
+        rusak = int(angka.isna().sum() - df[k].isna().sum())
+        if rusak > 0:
+            pesan.append(f"Kolom {k} berisi {rusak} nilai yang bukan angka.")
+    if pd.to_datetime(df["release_date"], errors="coerce").notna().sum() == 0:
+        pesan.append("Kolom release_date tidak memiliki tanggal valid (format YYYY-MM-DD).")
+    return pesan
+
+
+def load_and_clean(path):
+    """Baca CSV mentah lalu bersihkan: tipe data, missing value, duplikat."""
+    df = pd.read_csv(path, low_memory=False)
+    for k in ["vote_average", "vote_count", "popularity", "runtime"]:
+        df[k] = pd.to_numeric(df[k], errors="coerce")
+    df["release_year"] = pd.to_datetime(
+        df["release_date"], errors="coerce"
+    ).dt.year
+    df = df.dropna(subset=["title", "vote_average", "vote_count",
+                           "popularity", "runtime", "release_year"])
+    df = df[(df["vote_count"] >= 0) & (df["popularity"] >= 0) & (df["runtime"] > 0)]
+    df = df[df["genres"].apply(lambda g: len(_daftar_genre(g)) > 0)]
+    return df.drop_duplicates(subset="id").reset_index(drop=True)
+
+
+def build_features(df, artifacts=None):
+    """Bentuk X (n, 14) memakai artefak preprocessing yang sudah dilatih.
+
+    Return: X (np.ndarray), df_film (DataFrame), artefak (dict).
+    """
+    if artifacts is None:
+        artifacts = load_preprocessing_artifacts()
+    df = df.reset_index(drop=True)
+    X = transform_new(df, artifacts).to_numpy(dtype=float)
+    X = np.clip(X, 0.0, 1.0)
+
+    df_film = pd.DataFrame({
+        "id": df["id"],
+        "title": df["title"].astype(str),
+        "genres": df["genres"].apply(_daftar_genre),
+        "vote_average": df["vote_average"].astype(float),
+        "vote_count": df["vote_count"].astype(float),
+        "popularity": df["popularity"].astype(float),
+        "runtime": df["runtime"].astype(float),
+        "year": df["release_year"].astype(int),
+    })
+
+    artefak = {"prep": artifacts,
+               "feature_names": list(artifacts["feature_columns"])}
+    pca_path = PROJECT_ROOT / "models" / "pca_fcm.joblib"
+    if pca_path.exists():
+        pca_fcm = joblib.load(pca_path)
+        artefak["pca_fcm"] = pca_fcm
+        artefak["pca_2d"] = pca_fcm
+    return X, df_film, artefak
+
 # Alias agar provider.py yang masih memakai nama lama tetap jalan
 transform_new_data = transform_new
