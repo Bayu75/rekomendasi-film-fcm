@@ -142,3 +142,6 @@ def transform_new(data, artifacts):
     X_final = X_final[artifacts["feature_columns"]]
 
     return X_final
+
+# Alias agar provider.py yang masih memakai nama lama tetap jalan
+transform_new_data = transform_new
