@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Lokasi folder proyek
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data" / "raw" / "processed"
+DATA_DIR = PROJECT_ROOT / "data" / "processed"
 
 
 def load_preprocessing_artifacts(path=None):
@@ -30,7 +30,7 @@ def load_preprocessing_artifacts(path=None):
     return artifacts
 
 
-def transform_new_data(data, artifacts):
+def transform_new(data, artifacts):
     """
     Mengubah data film menjadi 14 fitur menggunakan
     scaler dan PCA yang sudah dilatih sebelumnya.
