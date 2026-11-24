@@ -25,3 +25,6 @@ models/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Dataset hasil preprocessing
+data/processed/
