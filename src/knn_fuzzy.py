@@ -10,6 +10,7 @@ derajat keanggotaan cluster FCM. α mengatur bobot keduanya
 """
 
 import numpy as np
+import pandas as pd
 
 
 def _cek_alpha(alpha):
@@ -147,3 +148,16 @@ def recommend_new(x_new, X, U, V, k=10, alpha=0.5, m=2.0):
     jarak = combined_distance(X, U, x_new, u_new, alpha=alpha)
     indeks = np.argsort(jarak)[: int(k)]
     return indeks, jarak[indeks]
+
+def recommend_prd(q_idx, X, U, k=10, alpha=0.5, x_new=None, u_new=None):
+    """Versi sesuai PRD untuk GUI. Hasil: DataFrame idx, distance, score."""
+    if q_idx is not None:
+        idx, dist = recommend(X, U, int(q_idx), k=k, alpha=alpha)
+    else:
+        if x_new is None or u_new is None:
+            raise ValueError("Untuk film baru, x_new dan u_new wajib diisi.")
+        X, U = _cek_matriks_XU(X, U)
+        jarak = combined_distance(X, U, np.asarray(x_new, float), np.asarray(u_new, float), alpha=alpha)
+        idx = np.argsort(jarak, kind="stable")[:int(k)]
+        dist = jarak[idx]
+    return pd.DataFrame({"idx": idx, "distance": dist, "score": 1.0 / (1.0 + dist)})
