@@ -25,6 +25,5 @@ models/*
 .idea/
 .DS_Store
 Thumbs.db
-
-# Dataset hasil preprocessing
-data/processed/
+data/processed/*
+!data/processed/.gitkeep
