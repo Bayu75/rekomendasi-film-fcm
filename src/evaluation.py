@@ -9,6 +9,8 @@ berukuran (n_film, n_genre), sesuai keluaran preprocessing.
 """
 
 import numpy as np
+import pandas as pd
+from src.data_loader import _parse_genres
 
 from src.knn_fuzzy import recommend
 
@@ -163,3 +165,22 @@ def alpha_sweep(
         }
         for a in alphas
     ]
+
+def _genre_matrix(df_film):
+    """Bentuk matriks G (one-hot genre) dari kolom genres."""
+    daftar = [g if isinstance(g, list) else _parse_genres(g) for g in df_film["genres"]]
+    semua = sorted({nama for gs in daftar for nama in gs})
+    return np.array([[nama in gs for nama in semua] for gs in daftar], dtype=int)
+
+
+def precision_at_k_prd(X, U, df_film, k_list=(5, 10, 20), n_sample=200, alpha=0.5, seed=42):
+    """Versi sesuai PRD untuk GUI. Hasil: DataFrame k, precision_fuzzy, precision_baseline."""
+    G = _genre_matrix(df_film)
+    n_sample = min(int(n_sample), len(X))
+    baris = []
+    for k in k_list:
+        h = compare_methods(X, U, G, k=k, alpha=alpha, n_queries=n_sample, seed=seed)
+        baris.append({"k": int(k),
+                      "precision_fuzzy": h["precision_fuzzy"],
+                      "precision_baseline": h["precision_baseline"]})
+    return pd.DataFrame(baris)
