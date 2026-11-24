@@ -27,3 +27,7 @@ models/*
 Thumbs.db
 data/processed/*
 !data/processed/.gitkeep
+!models/U.npy
+!models/V.npy
+!models/pca_fcm.joblib
+!models/fcm_meta.json
