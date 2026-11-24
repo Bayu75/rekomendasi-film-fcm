@@ -1,4 +1,5 @@
 """Memuat data hasil preprocessing (Anggota 1) untuk KNN dan evaluasi."""
+from cycler import V
 import ast
 from pathlib import Path
 
@@ -53,7 +54,14 @@ def load_model(n_film, c=3, model_dir=ROOT / "models", seed=42):
     model_dir = Path(model_dir)
     u_path, v_path = model_dir / "U.npy", model_dir / "V.npy"
     if u_path.exists() and v_path.exists():
-        return np.load(u_path), np.load(v_path), True
+        U = np.load(u_path)
+        V = np.load(v_path)
+        if U.shape[0] != n_film or V.shape[0] != U.shape[1]:
+            raise ValueError(
+                f"Ukuran U {U.shape} / V {V.shape} tidak cocok dengan {n_film} film."
+            )
+        return U, V, True
+
     rng = np.random.default_rng(seed)
     U = rng.random((n_film, c))
     U /= U.sum(axis=1, keepdims=True)
