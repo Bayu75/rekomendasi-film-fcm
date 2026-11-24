@@ -18,8 +18,11 @@ if not butuh_model():
     st.stop()
 
 FILM_BARU = "➕ Film baru dari input manual"
-judul_unik = sorted(set(ss.film_view["title"].astype(str)))
-opsi = ([FILM_BARU] if ss.get("new_film") else []) + judul_unik
+fv0 = ss.film_view
+judul = fv0["title"].astype(str)
+kembar = judul.str.lower().str.strip().duplicated(keep=False)
+label = judul.where(~kembar, judul + " (" + fv0["_year"].round().astype("Int64").astype(str) + ")").tolist()
+opsi = ([FILM_BARU] if ss.get("new_film") else []) + sorted(range(len(label)), key=lambda i: label[i].lower())
 
 # ---------------------------------------------------------------------------
 # Bagian 1: kontrol (F-14)
@@ -28,6 +31,7 @@ with st.container(key="kartu_kontrol"):
     st.html(komponen.judul_kartu("Pilih Film Acuan", "film"))
     kolom_a, kolom_b, kolom_c = st.columns([2, 1, 1])
     pilihan = kolom_a.selectbox("Film acuan", opsi, index=0,
+                                format_func=lambda o: o if o == FILM_BARU else label[o],
                                 help="Ketik untuk mencari judul. Hanya judul di dataset yang bisa dipilih, "
                                      "ditambah film baru jika sudah dibuat di halaman Input Data.")
     k = kolom_b.slider("Jumlah rekomendasi (k)", 5, 20, 10, help="Banyaknya film yang direkomendasikan (5–20).")
@@ -40,7 +44,7 @@ with st.container(key="kartu_kontrol"):
 
     if st.button("Cari Rekomendasi", type="primary", help="Mencari k film terdekat dengan jarak gabungan fitur dan keanggotaan."):
         try:
-            q = None if pilihan == FILM_BARU else provider.indeks_film(pilihan)
+            q = None if pilihan == FILM_BARU else int(pilihan)
             with st.spinner("Mencari film paling mirip…"):
                 provider.cari_rekomendasi(q, k, alpha)
             ss.hasil_semua = False

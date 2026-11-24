@@ -173,7 +173,9 @@ else:
         tu.insert(0, "Film", judul_film)
         k1.dataframe(tu, hide_index=True, width="stretch",
                      column_config={c_: st.column_config.ProgressColumn(min_value=0.0, max_value=1.0, format="%.3f") for c_ in kolom_c})
-        tv = pd.DataFrame(x["V"][:, :5], columns=[provider.nama_fitur()[i] for i in range(min(5, ss.X.shape[1]))])
+        kol_v = (["PC1", "PC2"] if x["V"].shape[1] == 2
+                 else [provider.nama_fitur()[i] for i in range(min(5, ss.X.shape[1]))])
+        tv = pd.DataFrame(x["V"][:, :5], columns=kol_v)
         tv.insert(0, "Pusat", kolom_c)
         k2.dataframe(tv.round(3), hide_index=True, width="stretch")
         k2.caption("Pusat cluster V (5 fitur pertama, ternormalisasi).")

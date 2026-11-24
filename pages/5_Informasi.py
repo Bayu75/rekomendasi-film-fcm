@@ -283,10 +283,10 @@ with tab_petunjuk:
     st.divider()
     st.subheader("Pembagian tugas dan kontribusi anggota")
     st.dataframe(pd.DataFrame([
-        (1, "Anggota 1 (isi nama/NIM)", "Data dan preprocessing", "Pembersihan data, fitur, PCA genre, validasi CSV", "src/preprocessing.py, BAB I dan III"),
-        (2, "Anggota 2 (isi nama/NIM)", "Fuzzy C-Means", "Implementasi FCM, pemilihan c, contoh hitung FCM", "src/fcm.py, BAB II dan IV"),
-        (3, "Anggota 3 (isi nama/NIM)", "KNN, integrasi, evaluasi", "KNN berbobot fuzzy, Precision@K, contoh hitung KNN", "src/knn_fuzzy.py, src/evaluation.py"),
-        (4, "Maytta (isi NIM)", "GUI dan visualisasi", "Enam halaman, grafik Plotly, interpretasi, contoh perhitungan, pesan error", "app.py, pages/, src/plots.py"),
+        (1, "Tebuana Agung Ayudia Lory (2408561080)", "Data dan preprocessing", "Pembersihan data, fitur, PCA genre, validasi CSV", "src/preprocessing.py, BAB I dan III"),
+        (2, "Gede Widhi Wardhana (2308561038)", "Fuzzy C-Means", "Implementasi FCM, pemilihan c, contoh hitung FCM", "src/fcm.py, BAB II dan IV"),
+        (3, "Kadek Bayu Dwi Pradnya (2408661059)", "KNN, integrasi, evaluasi", "KNN berbobot fuzzy, Precision@K, contoh hitung KNN", "src/knn_fuzzy.py, src/evaluation.py"),
+        (4, "Ni Luh Putu Ayu Maytta Wulandhani (2408561061)", "GUI dan visualisasi", "Enam halaman, grafik Plotly, interpretasi, contoh perhitungan, pesan error", "app.py, pages/, src/plots.py"),
     ], columns=["No", "Nama/NIM", "Tanggung jawab", "Kontribusi konkret", "Bukti pekerjaan"]).astype(str),
         hide_index=True, width="stretch")
     st.caption("Final Project Teknologi Logika Fuzzy · Informatika · Dosen: Dr. Made Agung Raharja, S.Si., M.Cs. · Kelompok 4 orang.")
