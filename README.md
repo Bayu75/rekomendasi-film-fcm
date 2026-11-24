@@ -6,7 +6,7 @@ Final Project mata kuliah Teknologi Logika Fuzzy, Universitas Udayana.
 ## Dataset
 
 [The Movies Dataset (Kaggle)](https://www.kaggle.com/datasets/rounakbanik/the-movies-dataset).
-Unduh lalu taruh `movies_metadata.csv` (dan opsional `ratings_small.csv`) di folder `data/raw/`.
+Unduh lalu taruh `movies_metadata.csv` (dan opsional `ratings_small.csv`) di folder `data/raw/TheMovieDataset`.
 File dataset tidak di-commit ke Git.
 
 ## Cara menjalankan
@@ -24,30 +24,46 @@ streamlit run app.py
 ## Struktur folder
 
 ```text
-fuzzyflix/
-├── app.py              # halaman Beranda
-├── pages/              # Input Data, Proses, Hasil, Evaluasi, Informasi Sistem
+rekomendasi-film-fcm/
+├── app.py                    # halaman Beranda
+├── pages/
+│   ├── 1_Input_Data.py       # input manual dan unggah CSV
+│   ├── 2_Proses.py           # menjalankan FCM
+│   ├── 3_Hasil.py            # rekomendasi KNN berbobot fuzzy
+│   ├── 4_Evaluasi.py         # Precision@K dan perbandingan metode
+│   └── 5_Informasi.py        # penjelasan metode dan petunjuk
 ├── src/
-│   ├── preprocessing.py
-│   ├── fcm.py
-│   ├── knn_fuzzy.py
-│   ├── evaluation.py
-│   └── plots.py
-├── data/raw/           # dataset Kaggle (tidak di-commit)
-├── models/             # hasil training (tidak di-commit)
-├── notebooks/          # eksplorasi data
-├── tests/
-└── docs/               # PRD.md, design-system.md
+│   ├── preprocessing.py      # pembersihan data, fitur, validasi CSV
+│   ├── data_loader.py        # memuat data dan model
+│   ├── fcm.py                # Fuzzy C-Means
+│   ├── knn_fuzzy.py          # KNN dengan jarak gabungan
+│   ├── evaluation.py         # Precision@K
+│   ├── provider.py           # penghubung GUI dengan modul algoritma
+│   ├── interpret.py          # interpretasi hasil
+│   ├── contoh.py             # contoh perhitungan sederhana
+│   ├── plots.py              # grafik Plotly
+│   ├── komponen.py, ui.py, tema.py   # komponen dan tema GUI
+│   └── demo_data.py          # data cadangan mode demo
+├── data/
+│   ├── raw/                  # dataset Kaggle (tidak di-commit)
+│   └── processed/            # X_final.csv, movies_final.csv, G.csv, preprocessing_artifacts.pkl
+├── models/                   # U.npy, V.npy, pca_fcm.joblib, fcm_meta.json
+├── notebooks/                # eksplorasi data, pembuatan model FCM, eksperimen evaluasi
+├── reports/                  # hasil eksperimen (perbandingan metode, alpha sweep)
+├── tests/                    # unit test dan smoke test GUI (pytest)
+├── docs/                     # PRD.md, design-system.md, GUI-notes.md
+├── requirements.txt
+└── pytest.ini
 ```
 
-## Pembagian tugas
+## Kontribusi anggota
 
-| Anggota | Peran | File utama | Branch |
-|---|---|---|---|
-| Anggota 1 | Data & preprocessing | `src/preprocessing.py` | `data` |
-| Anggota 2 | Fuzzy C-Means | `src/fcm.py` | `fcm` |
-| Anggota 3 | KNN & evaluasi | `src/knn_fuzzy.py`, `src/evaluation.py` | `knn-eval` |
-| Anggota 4 | GUI & visualisasi | `app.py`, `pages/`, `src/plots.py` | `gui` |
+| No  | Nama/NIM                                       | Tanggung jawab           | Kontribusi konkret                                                         | Bukti pekerjaan                                            |
+| --- | ---------------------------------------------- | ------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 1   | Tebuana Agung Ayudia Lory (2408561080)         | Data dan preprocessing   | Pembersihan data, fitur, PCA genre, validasi CSV                           | `src/preprocessing.py`, BAB I dan III                      |
+| 2   | Gede Widhi Wardhana (2308561038)               | Fuzzy C-Means            | Implementasi FCM, pemilihan c, contoh hitung FCM                           | `src/fcm.py`, BAB II dan IV                                |
+| 3   | Kadek Bayu Dwi Pradnya (2408661059)            | KNN, integrasi, evaluasi | KNN berbobot fuzzy, Precision@K, contoh hitung KNN                         | `src/knn_fuzzy.py`, `src/evaluation.py`, BAB II dan BAB IV |
+| 4   | Ni Luh Putu Ayu Maytta Wulandhani (2408561061) | GUI dan visualisasi      | Enam halaman, grafik Plotly, interpretasi, contoh perhitungan, pesan error | `app.py`, `pages/`, `src/plots.py`, BAB III dan BAB IV     |
 
 ## Alur kerja Git
 
