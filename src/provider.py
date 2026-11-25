@@ -95,16 +95,28 @@ def _token(*arr) -> str:
 
 @st.cache_resource(show_spinner=False)
 def _muat_artefak_model() -> dict | None:
-    """Muat artefak ``models/`` bila kelimanya ada (design-system bagian 9)."""
-    if not all((MODELS_DIR / f).exists() for f in ARTEFAK_FILE):
-        return None
+    """Data asli tim: X & film dari ``data_loader.load_data()`` (Anggota 1),
+    U & V dari ``load_model()`` + ``pca_fcm.joblib`` (Anggota 2).
+    Return None (-> GUI memakai data demo) bila salah satu belum ada / tidak cocok."""
     try:
+        import json
         import joblib
-        return {"X": np.load(MODELS_DIR / "X.npy"), "U": np.load(MODELS_DIR / "U.npy"),
-                "V": np.load(MODELS_DIR / "V.npy"), "artefak": joblib.load(MODELS_DIR / "artefak.joblib"),
-                "df_film": pd.read_parquet(MODELS_DIR / "film.parquet")}
-    except Exception:  # noqa: BLE001 - file rusak -> pakai demo
+        from src.data_loader import load_data, load_model
+        if not (MODELS_DIR / "pca_fcm.joblib").exists():
+            return None
+        X, G, movies, _ = load_data()
+        U, V, asli = load_model(len(X))
+        if not asli:
+            return None
+        pca = joblib.load(MODELS_DIR / "pca_fcm.joblib")
+        prep_path = ROOT / "data" / "processed" / "preprocessing_artifacts.pkl"
+        prep = joblib.load(prep_path) if prep_path.exists() else None
+        meta_path = MODELS_DIR / "fcm_meta.json"
+        meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    except Exception:  # noqa: BLE001
         return None
+    return {"X": X, "U": U, "V": V, "df_film": movies, "meta": meta,
+            "artefak": {"pca_fcm": pca, "pca_2d": pca, "prep": prep, "G": G}}
 
 
 @st.cache_data(show_spinner=False)
@@ -174,6 +186,20 @@ def _pasang_model(hasil: dict, param: dict) -> None:
     _segarkan_film_baru()
 
 
+def _pasang_asli(arts: dict) -> None:
+    """Pasang data + model asli (U, V Anggota 2) ke sesi."""
+    _pasang_data(arts["X"], arts["df_film"], arts["artefak"], "data/processed + models/ (U, V asli)", "real")
+    U, V, meta = arts["U"], arts["V"], arts["meta"]
+    hasil = {"V": V, "U": U, "J_history": meta.get("J_history", []), "n_iter": meta.get("n_iter"),
+             "fpc": float((U ** 2).sum() / len(U))}
+    _pasang_model(hasil, {**DEFAULT_PARAM, "c": int(V.shape[0]), "m": float(meta.get("m", 2.0))})
+    st.session_state.bagian_demo = set()
+    try:
+        hitung_hasil_antara()          # butuh n_iter dari fcm_meta.json
+    except Exception:  # noqa: BLE001
+        st.session_state.hasil_antara = None
+
+
 def init_session() -> None:
     """Siapkan session_state (idempoten). Dipanggil di setiap halaman.
 
@@ -186,11 +212,7 @@ def init_session() -> None:
     ss.setdefault("bagian_demo", set())
     arts = _muat_artefak_model()
     if arts is not None:
-        _pasang_data(arts["X"], arts["df_film"], arts["artefak"], "models/ (artefak tersimpan)", "real",
-                     ekstra=_ekstra_film(str(CSV_BAWAAN)) if CSV_BAWAAN.exists() else None)
-        U, V = arts["U"], arts["V"]
-        hasil = {"V": V, "U": U, "J_history": [], "n_iter": None, "fpc": float((U ** 2).sum() / len(U))}
-        _pasang_model(hasil, {**DEFAULT_PARAM, "c": int(V.shape[0])})
+        _pasang_asli(arts)
         return
     X, df, art, eks = _data_demo()
     _pasang_data(X, df, art, "demo sintetis (1.200 film karangan)", "demo", ekstra=eks)
@@ -279,6 +301,10 @@ def muat_dataset_bawaan() -> str:
 
     Return string ``"real"`` / ``"demo"`` / ``"demo-fallback"`` (CSV bawaan tidak ada).
     """
+    arts = _muat_artefak_model()
+    if arts is not None:
+        _pasang_asli(arts)
+        return "real"
     if not CSV_BAWAAN.exists():
         X, df, art, eks = _data_demo()
         _pasang_data(X, df, art, "demo sintetis (1.200 film karangan)", "demo", ekstra=eks)
@@ -339,9 +365,18 @@ def _segarkan_film_baru() -> None:
         ss.new_film = None
 
 
+def _ke_fcm(a: np.ndarray) -> np.ndarray:
+    """Ubah fitur 14 kolom ke ruang FCM (PCA 2D Anggota 2). Tanpa pca_fcm (demo): tetap."""
+    p = (st.session_state.artefak or {}).get("pca_fcm")
+    if p is None:
+        return a
+    z = p.transform(np.atleast_2d(a))
+    return z[0] if np.ndim(a) == 1 else z
+
+
 def _hitung_u_baru(x: np.ndarray) -> tuple[np.ndarray, bool]:
     ss = st.session_state
-    return _panggil("fcm", "membership", x, ss.fcm_result["V"], m=ss.fcm_param["m"])
+    return _panggil("fcm", "membership", _ke_fcm(x), ss.fcm_result["V"], m=ss.fcm_param["m"])
 
 
 def simpan_film_baru(judul, rating, vote, pop, durasi, tahun, genres) -> dict:
@@ -358,10 +393,11 @@ def simpan_film_baru(judul, rating, vote, pop, durasi, tahun, genres) -> dict:
     if art.get("demo"):
         x, demo = demo_data.transform_new(film, art), True
     else:
-        asli = _fn_asli("preprocessing", "transform_new")
-        if asli is None:
-            raise BackendBelumSiap("`transform_new` belum tersedia di preprocessing.py.")
-        x, demo = np.asarray(asli(film, art), dtype=float), False
+        asli = _fn_asli("preprocessing", "transform_new_data")
+        if asli is None or art.get("prep") is None:
+            raise BackendBelumSiap("`transform_new_data` atau preprocessing_artifacts.pkl belum tersedia.")
+        baris = pd.DataFrame([{**film, "release_year": film["year"]}])
+        x, demo = np.clip(asli(baris, art["prep"]).to_numpy(dtype=float)[0], 0.0, 1.0), False
     _tandai("transform_new", demo)
     ss.new_film = {"title": film["title"], "film": film, "x": x}
     _segarkan_film_baru()
@@ -385,7 +421,8 @@ def jalankan_clustering(c: int, m: float, error: float, maxiter: int) -> dict:
     pesan = interpret.validasi_parameter(c, m, error, maxiter)
     if pesan:
         raise ValueError(" ".join(pesan))
-    hasil, demo = _fcm_cached(ss.X, _token(ss.X), int(c), float(m), float(error), int(maxiter))
+    Z = _ke_fcm(ss.X)
+    hasil, demo = _fcm_cached(Z, _token(Z), int(c), float(m), float(error), int(maxiter))
     _tandai("fcm", demo)
     _pasang_model(hasil, {"c": int(c), "m": float(m), "error": float(error), "maxiter": int(maxiter)})
     try:
@@ -408,12 +445,13 @@ def hitung_hasil_antara(iterasi: tuple = (1, 2, 3, 5, 10)) -> list[dict] | None:
     if not prm or akhir is None or akhir.get("n_iter") is None:
         ss.hasil_antara = None
         return None
-    tok = _token(ss.X)
+    Z = _ke_fcm(ss.X)
+    tok = _token(Z)
     snap = []
     for k in iterasi:
         if k >= akhir["n_iter"]:
             continue
-        r, demo = _fcm_cached(ss.X, tok, prm["c"], prm["m"], prm["error"], int(k))
+        r, demo = _fcm_cached(Z, tok, prm["c"], prm["m"], prm["error"], int(k))
         _tandai("fcm", demo)
         J = (r.get("J_history") or [float("nan")])[-1]
         snap.append({"label": f"Iterasi {k}", "iter": int(k), "U": r["U"], "V": r["V"], "J": float(J)})
@@ -437,7 +475,7 @@ def kurva_keanggotaan(fitur: int, n_titik: int = 81) -> tuple[np.ndarray, np.nda
     for g in grid:
         x = ref.copy()
         x[fitur] = g
-        u, demo = _panggil("fcm", "membership", x, V, m=m)
+        u, demo = _panggil("fcm", "membership", _ke_fcm(x), V, m=m)
         baris.append(np.asarray(u, dtype=float))
     _tandai("membership", demo)
     return grid, np.vstack(baris), float(ref[fitur])
@@ -484,7 +522,8 @@ def _select_c_cached(_X: np.ndarray, x_token: str, c_awal: int, c_akhir: int, m:
 def hitung_pilih_c(m: float, error: float, maxiter: int, c_awal: int = 3, c_akhir: int = 8) -> pd.DataFrame:
     """FPC dan silhouette untuk c = 3…8 lewat ``fcm.select_c`` (F-12)."""
     ss = st.session_state
-    df, demo = _select_c_cached(ss.X, _token(ss.X), c_awal, c_akhir, float(m), float(error), int(maxiter))
+    Z = _ke_fcm(ss.X)
+    df, demo = _select_c_cached(Z, _token(Z), c_awal, c_akhir, float(m), float(error), int(maxiter))
     _tandai("select_c", demo)
     ss.select_c_df = df
     return df
@@ -511,7 +550,10 @@ def _model_2d():
 
 
 def _proyeksi(a: np.ndarray) -> np.ndarray:
-    return _model_2d().transform(np.atleast_2d(a))
+    a = np.atleast_2d(a)
+    if a.shape[1] == 2:          # V asli sudah berada di ruang PCA 2D
+        return a
+    return _model_2d().transform(a)
 
 
 def koordinat_2d() -> tuple[np.ndarray, np.ndarray]:
@@ -677,7 +719,7 @@ def jalankan_pengujian(alpha: float = 0.5, n_sample: int = 200, k_list: tuple = 
     _tandai("precision_at_k", demo)
     from src.plots import normalisasi_tabel_precision
     prec = normalisasi_tabel_precision(prec)
-    sil, sil_per, ukuran = _silhouette_cached(X, U, tok)
+    sil, sil_per, ukuran = _silhouette_cached(_ke_fcm(X), U, tok)
     fpc = float(ss.fcm_result.get("fpc", (U ** 2).sum() / len(U)))
     q, aktual, pf, pb, demo_p = _prediksi_cached(X, U, ss.df_film, tok, int(n_sample), float(alpha), 10)
     _tandai("recommend", demo_p)
@@ -717,7 +759,7 @@ def metrik_ringkas() -> dict:
         if ev:
             hasil["silhouette"], hasil["seri_sil"] = float(ev["silhouette"]), list(map(float, ev["silhouette_per"]))
         else:
-            sil, per, _ = _silhouette_cached(X, U, tok)
+            sil, per, _ = _silhouette_cached(_ke_fcm(X), U, tok)
             hasil["silhouette"], hasil["seri_sil"] = float(sil), list(map(float, per))
     except Exception:  # noqa: BLE001
         pass

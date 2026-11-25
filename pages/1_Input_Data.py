@@ -24,7 +24,10 @@ sumber = st.radio(
          "Unggahan harus memiliki kolom wajib yang sama.")
 
 if sumber == "Dataset bawaan":
-    if provider.CSV_BAWAAN.exists():
+    if provider._muat_artefak_model() is not None:
+        st.markdown("Data asli tim ditemukan (`data/processed/` dan `models/U.npy`, `V.npy`, `pca_fcm.joblib`). "
+                    "Klik tombol untuk memuatnya.")
+    elif provider.CSV_BAWAAN.exists():
         st.markdown("File `data/raw/movies_metadata.csv` ditemukan. Klik tombol untuk membersihkan data dan membentuk fitur.")
     else:
         st.warning("File `data/raw/movies_metadata.csv` belum ada. Unduh The Movies Dataset dari Kaggle dan taruh "
