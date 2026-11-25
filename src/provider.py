@@ -47,13 +47,18 @@ class BackendBelumSiap(RuntimeError):
 # Pemanggilan modul asli dengan cadangan demo
 # ---------------------------------------------------------------------------
 
+# Fungsi asli yang memakai kontrak PRD bagian 8 (dibuat Anggota 3).
+NAMA_PRD = {("knn_fuzzy", "recommend"): "recommend_prd",
+            ("evaluation", "precision_at_k"): "precision_at_k_prd"}
+
+
 def _fn_asli(modul: str, nama: str) -> Callable | None:
     """Ambil fungsi ``src.<modul>.<nama>`` jika modulnya bisa diimpor."""
     try:
         mod = importlib.import_module(f"src.{modul}")
     except Exception:  # noqa: BLE001 - modul belum ada / error impor
         return None
-    return getattr(mod, nama, None)
+    return getattr(mod, NAMA_PRD.get((modul, nama), nama), None)
 
 
 def _panggil(modul: str, nama: str, *args, **kw) -> tuple[Any, bool]:
